@@ -9,10 +9,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 LISTEN = False
-OUTPUT = "./jarvis-chatgpt.txt"
-RECORDING_FILE = "./jarvis-chatgpt.wav"
-EXTRA_INPUT = "./jarvis-chatgpt-input.txt"
-# EXTRA_INPUT = "./jarvis-chatgpt-input.txt"
+OUTPUT = "../data/jarvis-chatgpt.txt"
+RECORDING_FILE = "../data/jarvis-chatgpt.wav"
+EXTRA_INPUT = "../data/jarvis-chatgpt-input.txt"
 DONE = Event()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
