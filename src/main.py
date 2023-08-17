@@ -1,10 +1,12 @@
 import openai
 from pyaudio import PyAudio, paInt16
-import wave, whisper, os, time
+import wave, os, time
 from pynput import keyboard
 from threading import Thread,Event
 from itertools import cycle
 import traceback
+from whisper_client import ASRClient
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -74,9 +76,6 @@ def waiting(question, extra):
 listener = keyboard.Listener(on_press=on_press,on_release=on_release)
 listener.start()
 
-
-model = whisper.load_model("medium.en")
-out("waiting, pres f12 to ask a question, region selection will be appended...")
 print('...')
 
 while True:
@@ -88,8 +87,10 @@ while True:
       microphone(RECORDING_FILE, 60)
       if time.time() - t0 > 1:
         out("transcribing...")
-        r = model.transcribe(RECORDING_FILE)
-        question = r["text"]
+        client = ASRClient()
+        transcription = client.transcribe_audio(RECORDING_FILE)
+        print(transcription)
+        question = transcription
       else:
         question = ''
     finally:
