@@ -1,5 +1,15 @@
 
-# Install
+This tool allows you to use voice to interact with a chatgpt (voice transcribe time less than 2secs) and see the result in vim/vscode/emacs.
+
+For a better emacs version refer [emacs-chatgpt-jarvis](https://github.com/jackdoe/emacs-chatgpt-jarvis).
+
+Uses OpenAI's Whisper (it uses it locally, your voice is not sent anywhere), press the ctrl key to start recording. Whisper will continue to transcribe your speech until you release the ctrl key. After recording, ask ChatGPT for assistance and print the output in the buffer.
+
+It stores the recording (up to 60 seconds) in `data/jarvis-chatgpt.wav`
+
+
+
+## Install
 
 Set the openai key in `.env`
 
