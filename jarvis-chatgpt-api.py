@@ -5,26 +5,32 @@ from pynput import keyboard
 from threading import Thread,Event
 from itertools import cycle
 import traceback
+from dotenv import load_dotenv
+load_dotenv()
 
 LISTEN = False
-OUTPUT = "/tmp/jarvis-chatgpt.txt"
-RECORDING_FILE = "/tmp/jarvis-chatgpt.wav"
-EXTRA_INPUT = "/tmp/jarvis-chatgpt-input.txt"
+OUTPUT = "./jarvis-chatgpt.txt"
+RECORDING_FILE = "./jarvis-chatgpt.wav"
+EXTRA_INPUT = "./jarvis-chatgpt-input.txt"
+# EXTRA_INPUT = "./jarvis-chatgpt-input.txt"
 DONE = Event()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 def on_press(key):
   global LISTEN
-  if key ==  keyboard.Key.f12:
+  if key ==  keyboard.Key.ctrl:
     LISTEN = True
 
 def on_release(key):
   global LISTEN
-  if key ==  keyboard.Key.f12:
+  if key ==  keyboard.Key.ctrl:
     LISTEN = False
 
 def out(t):
   with open(OUTPUT, "w") as f:
+    f.write(t)
+def outappend(t):
+  with open(EXTRA_INPUT, "a") as f:
     f.write(t)
 
 def read_extra_file():
@@ -99,7 +105,9 @@ while True:
     t0 = Thread(target=waiting, args=(question, extra,))
     t0.start()
 
-    response = f"# QUESTION:\n{question}\n{extra}\n# CHATGPT START\n"
+    response = f"\n{extra}\n\n\n\n#### USER:\n{question}"
+    response += '\n### AI:'
+
 
     try:
       chatgpt_request = f"{question}\n{extra}"
@@ -110,9 +118,8 @@ while True:
           {"role": "user", "content": chatgpt_request}
         ]
       )
-
       response += completion.choices[0].message.content
-      response += '\n# CHATGPT END\n'
+      # response += '\n# CHATGPT END\n'
 
     except Exception as e:
       exception_stack = traceback.format_exc()
@@ -121,5 +128,6 @@ while True:
       DONE.set()
       t0.join()
       out(response)
+      outappend(response)
 
   time.sleep(0.01)
