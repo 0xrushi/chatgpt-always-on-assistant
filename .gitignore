@@ -2,3 +2,4 @@
 data/jarvis-chatgpt-input.txt
 data/jarvis-chatgpt-input.txt
 .gitignore
+src/__pycache__/whisper_client.cpython-39.pyc
