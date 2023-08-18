@@ -8,8 +8,17 @@ import traceback
 from whisper_client import ASRClient
 from dotenv import load_dotenv
 
+from langchain.chat_models import ChatOpenAI
+from langchain.chains import ConversationChain
+from langchain.memory import ConversationBufferMemory
+import pickle
+from utils import check_clear_history
+
 # Load environment variables from .env file
 load_dotenv()
+
+llm = ChatOpenAI(temperature=0.7)
+
 
 # Global variables
 LISTEN = False
@@ -20,6 +29,7 @@ PASTE = False
 OUTPUT = "../data/jarvis-chatgpt.txt"
 RECORDING_FILE = "../data/jarvis-chatgpt.wav"
 EXTRA_INPUT = "../data/jarvis-chatgpt-input.txt"
+MEMORY = "../data/memory.pkl"
 
 # Event for synchronization
 DONE = Event()
@@ -48,26 +58,6 @@ def on_release(key):
 def out(text):
     with open(OUTPUT, "w") as f:
         f.write(text)
-
-# Append text to the extra input file
-def outappend(text):
-    with open(EXTRA_INPUT, "a") as f:
-        f.write(text)
-
-# Read extra input file and delete it
-def read_extra_file():
-    data = ''
-    try:
-        with open(EXTRA_INPUT, "r") as f:
-            data = f.read()
-    except:
-        pass
-    finally:
-        try:
-            os.remove(EXTRA_INPUT)
-        except:
-            pass
-    return data
 
 # Record audio from the microphone
 def microphone(name, seconds):
@@ -115,6 +105,9 @@ while True:
     if PASTE:
         text = input("Paste your text below \n")
         question += f"\n{text}\n"
+        if check_clear_history(question.strip()):
+            PASTE = False
+            continue
     
     # Handle listening for audio
     if LISTEN:
@@ -127,10 +120,13 @@ while True:
                 out("transcribing...")
                 client = ASRClient()
                 transcription = client.transcribe_audio(RECORDING_FILE)
-                print(transcription)
-                question = transcription
+                print(f"transcribed : {transcription}")
+                if check_clear_history(transcription):
+                    flag_listen = False
+                    continue
+                question += transcription
             else:
-                question = ''
+                pass
         finally:
             try:
                 os.remove(RECORDING_FILE)
@@ -140,24 +136,27 @@ while True:
     # Process input and generate response
     if flag_listen or PASTE:
         print("here")
-        extra = read_extra_file()
+        extra=''
         DONE.clear()
         t0 = Thread(target=waiting, args=(question, extra,))
         t0.start()
 
-        response = f"\n{extra}\n\n\n\n#### USER:\n{question}"
-        response += '\n### AI:\n'
-
         try:
-            chatgpt_request = f"{question}\n{extra}"
-            completion = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are the best software developer in the world, most experienced in go and python, answer the following question:"},
-                    {"role": "user", "content": chatgpt_request}
-                ]
+            if os.path.exists(MEMORY):
+                with open(MEMORY, "rb") as file:
+                    pickled_memory = file.read()
+                    memory = pickle.loads(pickled_memory)
+            else:
+                memory = ConversationBufferMemory()
+            conversation = ConversationChain(
+                llm=llm, 
+                memory = memory,
+                verbose=True
             )
-            response += completion.choices[0].message.content
+            response = conversation.predict(input=question)
+            pickled_str = pickle.dumps(conversation.memory)
+            with open(MEMORY, "wb") as file:
+                file.write(pickled_str)
 
         except Exception as e:
             exception_stack = traceback.format_exc()
@@ -166,7 +165,6 @@ while True:
             DONE.set()
             t0.join()
             out(response)
-            outappend(response)
             PASTE = False
             flag_listen = False
 
